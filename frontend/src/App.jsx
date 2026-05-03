@@ -1,134 +1,7 @@
 import { useState } from "react";
 import "./App.css";
+import { runMacroProcessor } from "./utils/macroProcessor";
 
-// -----------------------------
-// MOCK MACRO PROCESSOR BACKEND
-// -----------------------------
-const runMacroProcessor = async (code, mode) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      const lines = code.split("\n").map(l => l.trim());
-
-      let mnt = [];
-      let mdt = [];
-
-      let macroTable = {};
-      let inMacro = false;
-      let macroName = "";
-      let mdtIndex = 1;
-      let mntIndex = 1;
-      let currentMacroLines = [];
-
-      let expandedCode = [];
-      let errors = [];
-
-      // =====================
-      // PASS 1
-      // =====================
-      if (mode === "pass1" || mode === "full") {
-        for (let line of lines) {
-          if (!line) continue;
-
-          if (line === "MACRO") {
-            inMacro = true;
-            currentMacroLines = [];
-            macroName = "";
-            continue;
-          }
-
-          if (inMacro) {
-            if (line === "MEND") {
-              mdt.push({ index: mdtIndex++, definition: "MEND" });
-              macroTable[macroName] = [...currentMacroLines];
-
-              inMacro = false;
-              continue;
-            }
-
-            if (!macroName) {
-              const parts = line.split(/\s+/);
-              macroName = parts[0];
-
-              mnt.push({
-                index: mntIndex++,
-                name: macroName
-              });
-
-              mdt.push({
-                index: mdtIndex++,
-                definition: line
-              });
-
-              currentMacroLines.push(line);
-            } else {
-              mdt.push({
-                index: mdtIndex++,
-                definition: line
-              });
-
-              currentMacroLines.push(line);
-            }
-          }
-        }
-      }
-
-      // =====================
-      // PASS 2
-      // =====================
-      if (mode === "pass2" || mode === "full") {
-        let isMacro = false;
-
-        for (let line of lines) {
-          if (!line) continue;
-
-          if (line === "MACRO") {
-            isMacro = true;
-            continue;
-          }
-
-          if (line === "MEND") {
-            isMacro = false;
-            continue;
-          }
-
-          if (isMacro) continue;
-
-          const parts = line.split(/\s+/);
-          const word = parts[0];
-
-          if (macroTable[word]) {
-            const args = parts.slice(1);
-
-            macroTable[word].forEach(mLine => {
-              let expanded = mLine;
-
-              args.forEach((arg, i) => {
-                expanded = expanded.replace(`&ARG${i + 1}`, arg);
-              });
-
-              expandedCode.push(expanded);
-            });
-
-          } else {
-            expandedCode.push(line);
-          }
-        }
-      }
-
-      resolve({
-        mnt,
-        mdt,
-        expandedCode: expandedCode.join("\n"),
-        errors
-      });
-
-    }, 800);
-  });
-};
-
-// -----------------------------
-// MAIN APP
-// -----------------------------
 export default function App() {
   const [code, setCode] = useState("");
   const [result, setResult] = useState(null);
@@ -152,107 +25,129 @@ export default function App() {
     setResult(null);
   };
 
+  const buttonBase =
+    "px-4 py-2 mt-3 mr-2 rounded-lg bg-gray-800 text-white hover:bg-gray-700 transition";
+  const activeButton =
+    "bg-sky-400 text-black font-bold";
+
   return (
-    <div className="container">
+    <div className="min-h-screen bg-[#0b1220] text-slate-200 p-6 flex justify-center">
+      <div className="w-full max-w-5xl">
 
-      <h1>Macro Processor</h1>
+        {/* TITLE */}
+        <h1 className="text-center text-3xl text-sky-400 mb-6 tracking-wide">
+          Macro Processor
+        </h1>
 
-      {/* INPUT */}
-      <textarea
-        value={code}
-        onChange={(e) => setCode(e.target.value)}
-        placeholder="Enter macro program..."
-      />
+        {/* INPUT */}
+        <textarea
+          className="w-full h-60 p-4 font-mono text-sm bg-gray-900 text-cyan-300 border border-gray-700 rounded-xl outline-none resize-none"
+          value={code}
+          onChange={(e) => setCode(e.target.value)}
+          placeholder="Enter macro program..."
+        />
 
-      {/* MODE SELECT */}
-      <div style={{ marginTop: "10px" }}>
-        <button
-          className={mode === "pass1" ? "active" : ""}
-          onClick={() => setMode("pass1")}
-        >
-          Pass 1
-        </button>
+        {/* MODE SELECT */}
+        <div className="mt-3">
+          <button
+            className={`${buttonBase} ${mode === "pass1" ? activeButton : ""}`}
+            onClick={() => setMode("pass1")}
+          >
+            Pass 1
+          </button>
 
-        <button
-          className={mode === "pass2" ? "active" : ""}
-          onClick={() => setMode("pass2")}
-        >
-          Pass 2
-        </button>
+          <button
+            className={`${buttonBase} ${mode === "pass2" ? activeButton : ""}`}
+            onClick={() => setMode("pass2")}
+          >
+            Pass 2
+          </button>
 
-        <button
-          className={mode === "full" ? "active" : ""}
-          onClick={() => setMode("full")}
-        >
-          Full Run
-        </button>
-      </div>
-
-      {/* ACTIONS */}
-      <div>
-        <button onClick={handleRun}>Run</button>
-        <button onClick={handleClear}>Clear</button>
-      </div>
-
-      {loading && <p>Processing...</p>}
-
-      {/* OUTPUT */}
-      {result && !loading && (
-        <div className="output-box">
-
-          <h2>✔ Pass 1 Output</h2>
-
-          <h3>MNT (Macro Name Table)</h3>
-          <table border="1" cellPadding="6">
-            <thead>
-              <tr>
-                <th>Index</th>
-                <th>Name</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.mnt.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.index}</td>
-                  <td>{item.name}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h3>MDT (Macro Definition Table)</h3>
-          <table border="1" cellPadding="6">
-            <thead>
-              <tr>
-                <th>Index</th>
-                <th>Definition</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.mdt.map((item, i) => (
-                <tr key={i}>
-                  <td>{item.index}</td>
-                  <td>{item.definition}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          <h2>✔ Pass 2 Output</h2>
-
-          <h3>Final Expanded Code</h3>
-          <pre>{result.expandedCode || "N/A"}</pre>
-
-          <h3>Errors</h3>
-          <pre>
-            {result.errors.length
-              ? result.errors.join("\n")
-              : "No Errors"}
-          </pre>
-
+          <button
+            className={`${buttonBase} ${mode === "full" ? activeButton : ""}`}
+            onClick={() => setMode("full")}
+          >
+            Full Run
+          </button>
         </div>
-      )}
 
+        {/* ACTIONS */}
+        <div>
+          <button className={buttonBase} onClick={handleRun}>
+            Run
+          </button>
+          <button className={buttonBase} onClick={handleClear}>
+            Clear
+          </button>
+        </div>
+
+        {loading && (
+          <p className="text-yellow-400 font-bold mt-3">Processing...</p>
+        )}
+
+        {/* OUTPUT */}
+        {result && !loading && (
+          <div className="mt-6 bg-gray-900 p-5 rounded-xl border border-gray-700 shadow-lg">
+
+            <h2 className="text-sky-400 text-xl mt-2 border-b border-gray-700 pb-1">
+              Pass 1 Output
+            </h2>
+
+            <h3 className="text-sky-300 mt-4">MNT (Macro Name Table)</h3>
+            <table className="w-full mt-2 bg-slate-900 rounded-lg overflow-hidden">
+              <thead>
+                <tr className="bg-gray-800 text-sky-400">
+                  <th className="p-2 text-left">Index</th>
+                  <th className="p-2 text-left">Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.mnt.map((item, i) => (
+                  <tr key={i} className="border-t border-gray-700 hover:bg-gray-800">
+                    <td className="p-2">{item.index}</td>
+                    <td className="p-2">{item.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h3 className="text-sky-300 mt-4">MDT (Macro Definition Table)</h3>
+            <table className="w-full mt-2 bg-slate-900 rounded-lg overflow-hidden">
+              <thead>
+                <tr className="bg-gray-800 text-sky-400">
+                  <th className="p-2 text-left">Index</th>
+                  <th className="p-2 text-left">Definition</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.mdt.map((item, i) => (
+                  <tr key={i} className="border-t border-gray-700 hover:bg-gray-800">
+                    <td className="p-2">{item.index}</td>
+                    <td className="p-2">{item.definition}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <h2 className="text-sky-400 text-xl mt-6 border-b border-gray-700 pb-1">
+              Pass 2 Output
+            </h2>
+
+            <h3 className="text-sky-300 mt-4">Final Expanded Code</h3>
+            <pre className="bg-[#0b1220] p-3 rounded-lg border border-gray-800 text-cyan-200 overflow-x-auto">
+              {result.expandedCode || "N/A"}
+            </pre>
+
+            <h3 className="text-sky-300 mt-4">Errors</h3>
+            <pre className="bg-[#0b1220] p-3 rounded-lg border border-gray-800 text-cyan-200">
+              {result.errors.length
+                ? result.errors.join("\n")
+                : "No Errors"}
+            </pre>
+
+          </div>
+        )}
+      </div>
     </div>
   );
 }
