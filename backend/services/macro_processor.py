@@ -32,7 +32,10 @@ def run_macro_processor(code: str, mode: str):
 
         if in_macro:
             if line == "MEND":
-                mdt.append({"index": mdt_index, "definition": "MEND"})
+                mdt.append({
+                    "index": mdt_index,
+                    "definition": "MEND"
+                })
                 mdt_index += 1
 
                 macro_table[macro_name] = current_macro_lines.copy()
@@ -47,21 +50,33 @@ def run_macro_processor(code: str, mode: str):
                     in_macro = False
                     continue
 
-                mnt.append({"index": mnt_index, "name": macro_name})
+                mnt.append({
+                    "index": mnt_index,
+                    "name": macro_name
+                })
+
                 mnt_index += 1
 
-                mdt.append({"index": mdt_index, "definition": line})
+                mdt.append({
+                    "index": mdt_index,
+                    "definition": line
+                })
+
                 mdt_index += 1
 
                 current_macro_lines.append(line)
+
             else:
-                mdt.append({"index": mdt_index, "definition": line})
+                mdt.append({
+                    "index": mdt_index,
+                    "definition": line
+                })
+
                 mdt_index += 1
 
                 current_macro_lines.append(line)
 
         else:
-            # ✅ FIX: allow macros + START/END
             if keyword not in VALID_KEYWORDS and keyword not in macro_table:
                 errors.append(f"Invalid keyword: {keyword}")
 
@@ -74,9 +89,11 @@ def run_macro_processor(code: str, mode: str):
 
     # PASS 2
     if mode in ["pass2", "full"]:
+
         is_macro = False
 
         for line in lines:
+
             if not line:
                 continue
 
@@ -94,24 +111,41 @@ def run_macro_processor(code: str, mode: str):
             parts = line.split()
             word = parts[0]
 
-            # Allow START & END
+            # START and END
             if word in ["START", "END"]:
                 expanded_code.append(line)
                 continue
 
             # Macro expansion
             if word in macro_table:
+
                 args = parts[1:]
 
                 if len(args) == 0:
                     errors.append(f"Missing argument for macro {word}")
                     continue
 
-                for m_line in macro_table[word]:
-                    if m_line.startswith(word):
-                        continue
+                # Macro header
+                header = macro_table[word][0]
+                header_parts = header.split()
 
-                    expanded = m_line.replace("&A", args[0])
+                # Formal parameters
+                formal_params = header_parts[1:]
+
+                # Parameter mapping
+                param_map = {}
+
+                for i in range(min(len(formal_params), len(args))):
+                    param_map[formal_params[i]] = args[i]
+
+                # Expand macro body
+                for m_line in macro_table[word][1:]:
+
+                    expanded = m_line
+
+                    for param, value in param_map.items():
+                        expanded = expanded.replace(param, value)
+
                     expanded_code.append(expanded)
 
             else:
