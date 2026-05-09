@@ -6,7 +6,7 @@ def run_macro_processor(code: str, mode: str):
     macro_table = {}
 
     in_macro = False
-    macro_name = ""
+    macro_name = ""c
     mdt_index = 1
     mnt_index = 1
     current_macro_lines = []
