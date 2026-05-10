@@ -51,6 +51,11 @@ cd frontend
 npm install
 npm run dev
 ```
+Before running frontend create a .env file in frontend folder and write paste:
+
+```bash
+VITE_API_URL=http://127.0.0.1:8000
+```
 
 The frontend will run at:
 ```
@@ -162,3 +167,4 @@ Ensure both services are running concurrently during development.
 - Authentication and authorization
 - Database integration
 - Deployment (e.g., Vercel for frontend, Render for backend)
+
