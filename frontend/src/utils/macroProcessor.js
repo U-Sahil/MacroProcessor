@@ -1,6 +1,8 @@
+const API_URL = import.meta.env.VITE_API_URL; 
+
 export const runMacroProcessor = async (code, mode) => {
   try {
-    const response = await fetch("http://127.0.0.1:8000/macro/run", {
+    const response = await fetch(`${API_URL}/macro/run`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

@@ -12,4 +12,8 @@ app.add_middleware(
     allow_headers=["*"]
 )
 
+@app.get("/")
+def home():
+    return {"message": "Backend is running"}
+
 app.include_router(macro.router, prefix="/macro", tags=["Macro Processor"])
